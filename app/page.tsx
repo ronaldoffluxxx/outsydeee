@@ -87,13 +87,13 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 pb-4 md:pb-20">
+    <div className="space-y-6 md:space-y-8 pb-4 md:pb-20 pt-4 md:pt-0">
 
       {/* Hero Section - Mobile Optimized */}
       <section className="relative h-[250px] md:h-[350px] rounded-lg md:rounded-xl overflow-hidden bg-gradient-to-b from-indigo-900 to-spotify-black p-6 md:p-8 flex flex-col justify-end">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1459749411177-287ce328810e?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center opacity-30 mix-blend-overlay"></div>
         <div className="relative z-10 max-w-2xl">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 md:mb-4 tracking-tight">
+          <h1 className="text-2xl md:text-5xl font-bold text-white mb-2 md:mb-4 tracking-tight">
             Discover Live Events
           </h1>
           <p className="text-zinc-200 text-sm md:text-lg mb-4 md:mb-6">
