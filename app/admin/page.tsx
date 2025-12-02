@@ -215,7 +215,7 @@ export default function AdminPage() {
                             </Link>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto -mx-6 px-6 pb-4">
+                        <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6 pb-4">
                             <table className="w-full text-sm text-left min-w-[800px]">
                                 <thead className="text-xs text-zinc-400 uppercase bg-white/5">
                                     <tr>

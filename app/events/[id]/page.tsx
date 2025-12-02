@@ -1,41 +1,77 @@
-"use client"
-
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Calendar, MapPin, Clock, Share2, Heart, ArrowLeft, Navigation } from "lucide-react"
+import { Calendar, MapPin, Clock, Share2, Heart, ArrowLeft, Navigation, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { useCurrency } from "@/components/providers/currency-provider"
 import { toast } from "sonner"
+import { createClient } from "@/lib/supabase"
+import { useParams } from "next/navigation"
 
-// Mock Data
-const EVENT = {
-    id: "1",
-    title: "Neon Nights Festival",
-    description: "Experience the ultimate electronic music festival under the stars. Featuring top DJs from around the world, immersive light shows, and an unforgettable atmosphere. Join us for a night of dance, music, and memories.",
-    date: "2024-08-15",
-    time: "20:00",
-    venue: "Downtown Arena, New York",
-    image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?q=80&w=1000&auto=format&fit=crop",
-    organizer: "Electric Dreams Co.",
-    ticketTypes: [
-        { id: "t1", name: "General Admission", price: 150, description: "Access to main stage and food court" },
-        { id: "t2", name: "VIP Pass", price: 299, description: "Priority entry, VIP lounge access, free drinks" },
-        { id: "t3", name: "Backstage Pass", price: 500, description: "Meet & Greet, Backstage access, All VIP perks" },
-    ]
-}
-
-export default function EventDetailsPage({ params }: { params: { id: string } }) {
+export default function EventDetailsPage() {
+    const params = useParams()
+    const id = params?.id as string
+    const [event, setEvent] = useState<any>(null)
+    const [loading, setLoading] = useState(true)
     const [selectedTicket, setSelectedTicket] = useState<string | null>(null)
     const { formatPrice } = useCurrency()
 
-    const mapUrl = `https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(EVENT.venue)}`
-    // Note: Since we don't have a real API key, we'll use a standard embed iframe for now or a placeholder
-    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(EVENT.venue)}`
+    useEffect(() => {
+        if (id) {
+            loadEvent()
+        }
+    }, [id])
+
+    const loadEvent = async () => {
+        try {
+            const supabase = createClient()
+            const { data, error } = await supabase
+                .from('events')
+                .select('*, profiles(full_name)')
+                .eq('id', id)
+                .single()
+
+            if (error) throw error
+            setEvent(data)
+        } catch (error) {
+            console.error('Error loading event:', error)
+            toast.error("Failed to load event details")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center min-h-[50vh]">
+                <Loader2 className="h-8 w-8 animate-spin text-spotify-green" />
+            </div>
+        )
+    }
+
+    if (!event) {
+        return (
+            <div className="text-center py-20">
+                <h2 className="text-2xl font-bold text-white mb-4">Event not found</h2>
+                <Link href="/events">
+                    <Button variant="outline">Back to Events</Button>
+                </Link>
+            </div>
+        )
+    }
+
+    // Mock ticket types for now since we don't have a tickets table yet
+    // In a real app, these would be fetched from a 'tickets' table related to the event
+    const ticketTypes = [
+        { id: "t1", name: "General Admission", price: event.price, description: "Standard entry ticket" },
+        { id: "t2", name: "VIP", price: event.price * 2, description: "VIP access and perks" },
+    ]
+
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.venue)}`
 
     return (
-        <div className="max-w-5xl mx-auto pb-20">
+        <div className="max-w-5xl mx-auto pb-20 px-4">
             <Link href="/events" className="inline-flex items-center text-zinc-400 hover:text-white mb-6 transition">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Events
@@ -44,10 +80,10 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
-                    <div className="relative aspect-video rounded-xl overflow-hidden">
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-800">
                         <Image
-                            src={EVENT.image}
-                            alt={EVENT.title}
+                            src={event.image || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}
+                            alt={event.title}
                             fill
                             className="object-cover"
                         />
@@ -59,8 +95,8 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
                                 onClick={() => {
                                     if (navigator.share) {
                                         navigator.share({
-                                            title: EVENT.title,
-                                            text: EVENT.description,
+                                            title: event.title,
+                                            text: event.description,
                                             url: window.location.href,
                                         })
                                     } else {
@@ -77,7 +113,6 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
                                 className="rounded-full bg-black/50 hover:bg-black/70 text-white border-none"
                                 onClick={() => {
                                     toast.success("Added to favorites")
-                                    // TODO: Implement actual Supabase favorite toggle
                                 }}
                             >
                                 <Heart className="h-4 w-4" />
@@ -86,8 +121,8 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
                     </div>
 
                     <div>
-                        <h1 className="text-4xl font-bold text-white mb-2">{EVENT.title}</h1>
-                        <p className="text-zinc-400 text-lg">by <span className="text-spotify-green font-bold hover:underline cursor-pointer">{EVENT.organizer}</span></p>
+                        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{event.title}</h1>
+                        <p className="text-zinc-400 text-lg">by <span className="text-spotify-green font-bold">{event.profiles?.full_name || 'Organizer'}</span></p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -96,7 +131,7 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
                                 <Calendar className="h-8 w-8 text-spotify-green mr-4" />
                                 <div>
                                     <p className="text-xs text-zinc-400 uppercase font-bold">Date</p>
-                                    <p className="font-bold">{new Date(EVENT.date).toLocaleDateString()}</p>
+                                    <p className="font-bold">{new Date(event.date).toLocaleDateString()}</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -105,7 +140,7 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
                                 <Clock className="h-8 w-8 text-blue-500 mr-4" />
                                 <div>
                                     <p className="text-xs text-zinc-400 uppercase font-bold">Time</p>
-                                    <p className="font-bold">{EVENT.time}</p>
+                                    <p className="font-bold">{event.time}</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -114,7 +149,7 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
                                 <MapPin className="h-8 w-8 text-red-500 mr-4" />
                                 <div>
                                     <p className="text-xs text-zinc-400 uppercase font-bold">Venue</p>
-                                    <p className="font-bold truncate">{EVENT.venue}</p>
+                                    <p className="font-bold truncate">{event.venue}</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -122,7 +157,7 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
 
                     <div className="space-y-4">
                         <h2 className="text-2xl font-bold text-white">About Event</h2>
-                        <p className="text-zinc-300 leading-relaxed">{EVENT.description}</p>
+                        <p className="text-zinc-300 leading-relaxed whitespace-pre-wrap">{event.description}</p>
                     </div>
 
                     {/* Map Section */}
@@ -137,20 +172,10 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
                             </a>
                         </div>
                         <div className="aspect-video w-full rounded-xl overflow-hidden bg-zinc-800 relative">
-                            <iframe
-                                width="100%"
-                                height="100%"
-                                style={{ border: 0 }}
-                                loading="lazy"
-                                allowFullScreen
-                                src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(EVENT.venue)}`}
-                            >
-                            </iframe>
-                            {/* Fallback since we don't have an API key */}
                             <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/90 text-center p-6">
                                 <div>
                                     <MapPin className="h-12 w-12 text-spotify-green mx-auto mb-4" />
-                                    <h3 className="text-xl font-bold text-white mb-2">{EVENT.venue}</h3>
+                                    <h3 className="text-xl font-bold text-white mb-2">{event.venue}</h3>
                                     <p className="text-zinc-400 mb-4">Click 'Get Directions' to view on Google Maps</p>
                                     <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
                                         <Button className="bg-spotify-green text-black font-bold rounded-full">
@@ -169,7 +194,7 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
                         <CardContent className="p-6 space-y-6">
                             <h3 className="text-xl font-bold">Select Tickets</h3>
                             <div className="space-y-3">
-                                {EVENT.ticketTypes.map((ticket) => (
+                                {ticketTypes.map((ticket) => (
                                     <div
                                         key={ticket.id}
                                         onClick={() => setSelectedTicket(ticket.id)}
@@ -191,10 +216,10 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
                                 <div className="flex justify-between items-center mb-4">
                                     <span className="text-zinc-400">Total</span>
                                     <span className="text-2xl font-bold">
-                                        {selectedTicket ? formatPrice(EVENT.ticketTypes.find(t => t.id === selectedTicket)?.price || 0) : formatPrice(0)}
+                                        {selectedTicket ? formatPrice(ticketTypes.find(t => t.id === selectedTicket)?.price || 0) : formatPrice(0)}
                                     </span>
                                 </div>
-                                <Link href={`/checkout?eventId=${EVENT.id}&ticketId=${selectedTicket}`}>
+                                <Link href={`/checkout?eventId=${event.id}&ticketId=${selectedTicket}`}>
                                     <Button className="w-full bg-spotify-green text-black font-bold rounded-full py-6 text-lg hover:scale-105 transition" disabled={!selectedTicket}>
                                         Buy Tickets
                                     </Button>
