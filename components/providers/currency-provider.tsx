@@ -33,17 +33,29 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
         // Detect currency based on IP
         const detectCurrency = async () => {
             try {
-                const response = await fetch('https://ipapi.co/json/')
+                // Add 5s timeout
+                const controller = new AbortController()
+                const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+                const response = await fetch('https://ipapi.co/json/', {
+                    signal: controller.signal,
+                    next: { revalidate: 3600 } // Cache for 1 hour
+                })
+                clearTimeout(timeoutId)
+
+                if (!response.ok) throw new Error('Network response was not ok')
+
                 const data = await response.json()
 
                 if (data.currency && ['USD', 'EUR', 'GBP'].includes(data.currency)) {
                     setCurrency(data.currency as Currency)
                 } else {
-                    setCurrency('NGN') // Default to Naira for others (including NG)
+                    setCurrency('NGN')
                 }
             } catch (error) {
-                console.error('Failed to detect currency:', error)
-                setCurrency('NGN') // Fallback to Naira
+                // Silent fallback to NGN is fine
+                // console.warn('Using default currency (NGN):', error)
+                setCurrency('NGN')
             }
         }
 
